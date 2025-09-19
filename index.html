@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Dashboard - PORTADOR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Razorpay Checkout Script -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* Dark background */
+            color: #f3f4f6; /* Light text */
+        }
+        .card {
+            background-color: #1f2937; /* Darker card background */
+            border: 1px solid #374151;
+            border-radius: 0.75rem;
+        }
+        .form-input {
+            width: 100%; padding: 0.75rem; border: 1px solid #4b5563;
+            border-radius: 0.5rem; background-color: #374151; color: #f3f4f6;
+        }
+        .form-input::placeholder { color: #9ca3af; }
+        .form-input:focus {
+            outline: none; border-color: #ff0202;
+            box-shadow: 0 0 0 2px rgba(255, 2, 2, 0.3);
+        }
+        .btn {
+            padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600;
+            text-align: center; transition: all 0.3s; cursor: pointer;
+        }
+        .btn-brand { background-color: #ff0202; color: #ffffff; }
+        .btn-brand:hover { background-color: #e60000; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex; align-items: center; justify-content: center; z-index: 50;
+        }
+        .modal-content {
+            background: #1f2937; padding: 2rem; border-radius: 0.75rem;
+            width: 90%; max-width: 56rem; max-height: 90vh; overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Authentication View -->
+    <div id="auth-view" class="w-full" style="display: none;">
+        <div class="flex flex-col items-center justify-center min-h-screen py-8">
+            <header class="flex justify-center items-center mb-8">
+                <img src="LOGO PORTADOR new black.png" alt="PORTADOR Logo" class="h-20">
+            </header>
+            <div class="w-full max-w-md bg-[#1f2937] rounded-xl shadow-lg p-8 border border-gray-700">
+                <div id="login-view-content">
+                    <h2 class="text-2xl font-bold mb-4 text-white text-center">Customer Login</h2>
+                    <form id="login-form" class="space-y-4">
+                        <input type="email" id="login-email" placeholder="Email" class="form-input" required>
+                        <input type="password" id="login-password" placeholder="Password" class="form-input" required>
+                        <button type="submit" class="btn btn-brand w-full">Login</button>
+                    </form>
+                    <p class="text-center mt-4 text-gray-400">
+                        New user? <a href="#" id="show-signup-btn" class="text-red-500 hover:underline">Sign up here</a>
+                    </p>
+                </div>
+                <div id="signup-view-content" class="hidden">
+                    <h2 class="text-2xl font-bold mb-4 text-white text-center">New Customer Signup</h2>
+                    <form id="signup-form" class="space-y-4">
+                        <input type="text" id="signup-name" placeholder="Full Name" class="form-input" required>
+                        <input type="text" id="signup-company" placeholder="Company Name (Optional)" class="form-input">
+                        <input type="email" id="signup-email" placeholder="Email" class="form-input" required>
+                        <input type="password" id="signup-password" placeholder="Password" class="form-input" required>
+                        <button type="submit" class="btn btn-brand w-full">Sign Up</button>
+                    </form>
+                    <p class="text-center mt-4 text-gray-400">
+                        Already have an account? <a href="#" id="show-login-btn" class="text-red-500 hover:underline">Login here</a>
+                    </p>
+                </div>
+                <div id="auth-message" class="mt-6 text-center font-semibold text-lg"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard View -->
+    <div id="dashboard-view" class="hidden w-full">
+        <header class="flex justify-between items-center mb-8 w-full max-w-7xl mx-auto">
+            <img src="LOGO PORTADOR new black.png" alt="PORTADOR Logo" class="h-16">
+            <div id="user-info" class="flex items-center space-x-4">
+                 <span id="user-name-display" class="font-semibold text-gray-300"></span>
+                 <button id="logout-button" class="btn bg-gray-700 hover:bg-gray-600 text-white">Logout</button>
+            </div>
+        </header>
+
+        <main class="space-y-8 w-full max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div class="card p-6 flex items-center space-x-4">
+                    <i data-lucide="package" class="w-10 h-10 text-red-500"></i>
+                    <div><p class="text-gray-400">Total Shipments</p><p id="total-shipments" class="text-2xl font-bold text-white">0</p></div>
+                </div>
+                <div class="card p-6 flex items-center space-x-4">
+                    <i data-lucide="check-circle" class="w-10 h-10 text-green-500"></i>
+                    <div><p class="text-gray-400">Delivered</p><p id="delivered-shipments" class="text-2xl font-bold text-white">0</p></div>
+                </div>
+                <div class="card p-6 flex items-center space-x-4">
+                    <i data-lucide="truck" class="w-10 h-10 text-yellow-500"></i>
+                    <div><p class="text-gray-400">In Transit</p><p id="in-transit-shipments" class="text-2xl font-bold text-white">0</p></div>
+                </div>
+                <div class="card p-6 flex flex-col justify-between">
+                     <div>
+                        <p class="text-gray-400">Wallet Balance</p>
+                        <p id="wallet-balance" class="text-2xl font-bold text-white">₹ 0.00</p>
+                     </div>
+                     <button id="add-funds-btn" class="btn btn-brand text-xs w-full mt-2">Add Funds</button>
+                </div>
+                <button id="open-booking-modal-btn" class="bg-red-600 text-white rounded-lg flex items-center justify-center text-lg font-semibold hover:bg-red-700 transition duration-300">
+                    <i data-lucide="plus-circle" class="w-6 h-6 mr-2"></i> Book New Shipment
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-1 card p-8">
+                    <h2 class="text-2xl font-bold mb-6 text-white">Track Shipment</h2>
+                    <form id="tracking-form" class="space-y-4">
+                        <input id="tracking-id-input" type="text" placeholder="Enter Tracking ID (AWB)" class="form-input">
+                        <button type="submit" class="btn btn-brand w-full">Track</button>
+                    </form>
+                    <div id="tracking-results" class="mt-8 space-y-4">
+                        <p class="text-gray-400">Enter a tracking ID to see live status.</p>
+                    </div>
+                </div>
+                <div class="lg:col-span-2 card p-8">
+                    <h2 class="text-2xl font-bold mb-6 text-white">Shipment History</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead><tr class="border-b border-gray-700 bg-gray-800"><th class="p-4 font-semibold text-white">Tracking ID</th><th class="p-4 font-semibold text-white">Destination</th><th class="p-4 font-semibold text-white">Date</th><th class="p-4 font-semibold text-white">Status</th></tr></thead>
+                            <tbody id="shipment-history-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Generic Modal -->
+    <div id="modal" class="modal-overlay hidden">
+         <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="modal-title" class="text-2xl font-bold text-white"></h2>
+                <button id="close-modal-btn"><i data-lucide="x" class="w-6 h-6 text-gray-400"></i></button>
+            </div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const API_BASE_URL = 'https://portador-backend.onrender.com/api';
+        const SERVICES = ["PORTADOR SOS (10-Hour/Same Day)","PORTADOR EXPRESS (Next/Second Day)","PORTADOR DEFERRED (Affordable Air Cargo)","PORTADOR GLOBAL EXPRESS (International)","PORTADOR EXCESS (Baggage)"];
+        
+        let currentUserData = {};
+        let currentShipmentDetails={};
+
+        // --- DOM Element Selections ---
+        const authView = document.getElementById("auth-view");
+        const dashboardView = document.getElementById("dashboard-view");
+        const loginForm = document.getElementById("login-form");
+        const signupForm = document.getElementById("signup-form");
+        const authMessage = document.getElementById("auth-message");
+        const userInfo = document.getElementById("user-info");
+        const userNameDisplay = document.getElementById("user-name-display");
+        const logoutButton = document.getElementById("logout-button");
+        const walletBalanceDisplay = document.getElementById("wallet-balance");
+        const totalShipmentsDisplay = document.getElementById("total-shipments");
+        const deliveredShipmentsDisplay = document.getElementById("delivered-shipments");
+        const inTransitShipmentsDisplay = document.getElementById("in-transit-shipments");
+        const trackingForm = document.getElementById("tracking-form");
+        const trackingIdInput = document.getElementById("tracking-id-input");
+        const trackingResults = document.getElementById("tracking-results");
+        const shipmentHistoryBody = document.getElementById("shipment-history-body");
+        const openBookingModalBtn = document.getElementById("open-booking-modal-btn");
+        const loginViewContent = document.getElementById('login-view-content');
+        const signupViewContent = document.getElementById('signup-view-content');
+        const showSignupBtn = document.getElementById('show-signup-btn');
+        const showLoginBtn = document.getElementById('show-login-btn');
+        const addFundsBtn = document.getElementById('add-funds-btn');
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        
+        // --- Core Functions ---
+        function showDashboard() {
+            authView.style.display = "none";
+            dashboardView.style.display = "block";
+        }
+        
+        function showLogin() {
+            authView.style.display = "block";
+            dashboardView.style.display = "none";
+        }
+
+        async function initializeApp() {
+            const token = localStorage.getItem("idToken");
+            if (token) {
+                await fetchAndDisplayDashboardData(token);
+            } else {
+                showLogin();
+            }
+        }
+
+        async function fetchAndDisplayDashboardData(token) {
+            try {
+                const [profileRes, statsRes, historyRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/user/profile`, { headers: { Authorization: `Bearer ${token}` } }),
+                    fetch(`${API_BASE_URL}/shipments/stats`, { headers: { Authorization: `Bearer ${token}` } }),
+                    fetch(`${API_BASE_URL}/shipments`, { headers: { Authorization: `Bearer ${token}` } })
+                ]);
+
+                if (profileRes.status === 403) {
+                    console.error("Auth token invalid or expired.");
+                    handleLogout();
+                    authMessage.textContent = "Your session has expired. Please log in again.";
+                    authMessage.style.color = "#EF4444";
+                    return;
+                }
+                if (!profileRes.ok || !statsRes.ok || !historyRes.ok) {
+                    throw new Error("Could not fetch all dashboard data.");
+                }
+
+                currentUserData = await profileRes.json();
+                const statsData = await statsRes.json();
+                const historyData = await historyRes.json();
+                
+                userNameDisplay.textContent = `Welcome, ${currentUserData.name}!`;
+                walletBalanceDisplay.textContent = `₹ ${currentUserData.walletBalance.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")}`;
+                totalShipmentsDisplay.textContent = statsData.total;
+                deliveredShipmentsDisplay.textContent = statsData.delivered;
+                inTransitShipmentsDisplay.textContent = statsData.inTransit;
+                displayShipmentHistory(historyData);
+                showDashboard();
+            } catch(error) {
+                console.error("Dashboard fetch error:", error);
+                handleLogout(); // Log out on any critical data fetch error
+            }
+        }
+
+        // --- Event Handlers ---
+        async function handleLogin(e) {
+            e.preventDefault();
+            authMessage.textContent = "Logging in...";
+            authMessage.style.color = "#f3f4f6";
+            const email = document.getElementById("login-email").value;
+            const password = document.getElementById("login-password").value;
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+                const data = await response.json();
+                if(!response.ok) throw new Error(data.error || "Login failed.");
+                localStorage.setItem("idToken", data.idToken);
+                await fetchAndDisplayDashboardData(data.idToken);
+            } catch(error) {
+                authMessage.textContent = `Error: ${error.message}`;
+                authMessage.style.color = "#EF4444";
+            }
+        }
+
+        async function handleSignup(e) {
+            e.preventDefault();
+            authMessage.textContent = "Signing up...";
+            authMessage.style.color = "#f3f4f6";
+            const name = document.getElementById("signup-name").value;
+            const companyName = document.getElementById("signup-company").value;
+            const email = document.getElementById("signup-email").value;
+            const password = document.getElementById("signup-password").value;
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/signup`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, companyName, email, password }) });
+                const data = await response.json();
+                if(!response.ok) throw new Error(data.error || "Signup failed.");
+                authMessage.textContent = "Signup successful! Please log in.";
+                authMessage.style.color = "#10B981";
+                signupForm.reset();
+                showLoginBtn.click(); // Switch to login view
+            } catch(error) {
+                authMessage.textContent = `Error: ${error.message}`;
+                authMessage.style.color = "#EF4444";
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem("idToken");
+            showLogin();
+        }
+        
+        async function handleTracking(e) {
+            e.preventDefault();
+            trackingResults.innerHTML = `<p class="text-gray-400">Searching...</p>`;
+            const trackingId = trackingIdInput.value.trim();
+            if(!trackingId) return trackingResults.innerHTML = `<p class="text-red-500">Please enter a tracking ID.</p>`;
+            try {
+                const response = await fetch(`${API_BASE_URL}/shipments/track/${trackingId}`);
+                const data = await response.json();
+                if(!response.ok) throw new Error(data.error || "Could not find shipment.");
+                const destination = (data.consignee && data.consignee.pincode) ? data.consignee.pincode : (data.deliveryLocation || "N/A");
+                let historyHtml = `<h3 class="font-bold text-lg text-white">Status: ${data.status}</h3><p class="text-gray-300"><strong>To:</strong> ${destination}</p><hr class="my-4 border-gray-700"><h4 class="font-semibold mb-2 text-white">History:</h4>`;
+                if(data.updates && data.updates.length > 0) {
+                    const sortedUpdates = data.updates.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                    historyHtml += `<ul class="space-y-3">`;
+                    sortedUpdates.forEach(update => {
+                        const date = new Date(update.timestamp._seconds ? update.timestamp._seconds * 1000 : update.timestamp);
+                        historyHtml += `<li class="text-sm"><p class="font-semibold text-gray-200">${update.status} - ${update.location}</p><p class="text-gray-400">${date.toLocaleString()}</p></li>`;
+                    });
+                    historyHtml += `</ul>`;
+                } else {
+                    historyHtml += `<p class="text-gray-500">No updates yet.</p>`;
+                }
+                trackingResults.innerHTML = historyHtml;
+            } catch(error) {
+                trackingResults.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // --- UI Helper Functions ---
+        function displayShipmentHistory(shipments) {
+            shipmentHistoryBody.innerHTML = "";
+            if(!shipments || shipments.length === 0) {
+                shipmentHistoryBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-500">No shipments yet.</td></tr>`;
+                return;
+            }
+            shipmentHistoryBody.innerHTML = shipments.map(shipment => {
+                const createdAtDate = new Date(shipment.createdAt._seconds * 1000);
+                const destination = (shipment.consignee && shipment.consignee.pincode) ? shipment.consignee.pincode : (shipment.deliveryLocation || "N/A");
+                const statusHtml = (status => `<span class="px-2 py-1 text-xs font-semibold ${status === "Delivered" ? "text-green-300 bg-green-900" : "text-yellow-300 bg-yellow-900"} rounded-full">${status}</span>`)(shipment.status);
+                return `<tr class="border-b border-gray-700 text-gray-300"><td class="p-4 font-mono text-sm">${shipment.trackingId}</td><td class="p-4">${destination}</td><td class="p-4">${createdAtDate.toLocaleDateString()}</td><td class="p-4">${statusHtml}</td></tr>`;
+            }).join("");
+        }
+        
+        // --- Functions for Dynamically Created Content ---
+        function initializeBookingForm() {
+            const bookingFormEl = document.getElementById("booking-form"), parcelsContainerEl = document.getElementById("parcels-container"), addParcelBtnEl = document.getElementById("add-parcel-btn"), serviceTypeSelectEl = document.getElementById("service-type"), bookingStep1El = document.getElementById("booking-step-1"), bookingStep2El = document.getElementById("booking-step-2"), getQuoteBtnEl = document.getElementById("get-quote-btn"), backToEditBtnEl = document.getElementById("back-to-edit-btn"), confirmBookBtnEl = document.getElementById('confirm-book-btn');
+            SERVICES.forEach(s => { const o=document.createElement("option"); o.value=s; o.textContent=s; serviceTypeSelectEl.appendChild(o); });
+            addParcelBtnEl.addEventListener("click", () => { const e=parcelsContainerEl.children[0].cloneNode(!0); e.querySelectorAll("input").forEach(e=>e.value=""); parcelsContainerEl.appendChild(e); updateRemoveButtons(); });
+            parcelsContainerEl.addEventListener("click", e => { if(e.target.closest(".remove-parcel-btn")) { e.target.closest(".parcel-row").remove(); updateRemoveButtons(); }});
+            getQuoteBtnEl.addEventListener("click", handleGetQuote);
+            backToEditBtnEl.addEventListener("click", () => { bookingStep1El.style.display = "block"; bookingStep2El.style.display = "none"; });
+            confirmBookBtnEl.addEventListener('click', handleConfirmBooking);
+        }
+
+        function updateRemoveButtons() {
+            const parcelsContainerEl = document.getElementById("parcels-container");
+            if (!parcelsContainerEl) return;
+            const rows = parcelsContainerEl.querySelectorAll(".parcel-row");
+            rows.forEach((row, index) => {
+                const removeBtn = row.querySelector(".remove-parcel-btn");
+                if(rows.length > 1) removeBtn.classList.remove("hidden");
+                else removeBtn.classList.add("hidden");
+            });
+        }
+        
+        function showAddFundsModal(){
+            modalTitle.textContent = "Add Funds to Wallet";
+            modalBody.innerHTML = `<form id="add-funds-form" class="space-y-4"><div><label class="block font-semibold text-gray-300 mb-2">Amount (INR)</label><input type="number" id="funds-amount" placeholder="e.g., 1000" class="form-input" required min="1"></div><button type="submit" class="btn btn-brand w-full">Proceed to Payment</button><div id="payment-message" class="mt-4 text-center font-semibold"></div></form>`;
+            modal.classList.remove('hidden');
+            document.getElementById('add-funds-form').addEventListener('submit', handlePayment);
+        }
+
+        async function handlePayment(e) {
+            e.preventDefault();
+            const messageEl = document.getElementById('payment-message');
+            messageEl.textContent = 'Creating payment order...';
+            messageEl.style.color = '#f3f4f6';
+            const amount = document.getElementById('funds-amount').value;
+            const token = localStorage.getItem('idToken');
+            try {
+                const orderRes = await fetch(`${API_BASE_URL}/payment/create-order`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ amount: amount * 100 }) });
+                const orderData = await orderRes.json();
+                if (!orderRes.ok) throw new Error(orderData.error || 'Failed to create order.');
+                const options = {
+                    key: orderData.key_id, amount: orderData.amount, currency: "INR", name: "PORTADOR", description: "Wallet Top-up", order_id: orderData.id,
+                    handler: async function (response){
+                        messageEl.textContent = 'Verifying payment...';
+                        const verifyRes = await fetch(`${API_BASE_URL}/payment/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id, razorpay_signature: response.razorpay_signature }) });
+                        const verifyData = await verifyRes.json();
+                        if (!verifyRes.ok) throw new Error(verifyData.error || 'Payment verification failed.');
+                        messageEl.textContent = 'Success! Wallet updated.';
+                        messageEl.style.color = '#10B981';
+                        await fetchAndDisplayDashboardData(token);
+                        setTimeout(() => modal.classList.add('hidden'), 2000);
+                    },
+                    prefill: { name: currentUserData.name, email: currentUserData.email },
+                    theme: { color: "#ff0202" }
+                };
+                const rzp1 = new Razorpay(options);
+                rzp1.on('payment.failed', function (response){ messageEl.textContent = `Payment Failed: ${response.error.description}`; messageEl.style.color = '#EF4444'; });
+                rzp1.open();
+            } catch(error) { messageEl.textContent = `Error: ${error.message}`; messageEl.style.color = '#EF4444'; }
+        }
+
+        async function handleGetQuote(){
+            const bookingFormEl = document.getElementById("booking-form");
+            const bookingMessageEl = document.getElementById("booking-message");
+            if(!bookingFormEl.checkValidity()) return bookingFormEl.reportValidity();
+            bookingMessageEl.textContent = "Calculating Quote...";
+            bookingMessageEl.style.color = "#f3f4f6";
+            const token = localStorage.getItem("idToken");
+            currentShipmentDetails = getShipmentDetailsFromForm();
+            try {
+                const response = await fetch(`${API_BASE_URL}/shipments/quote`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify(currentShipmentDetails)
+                });
+                const data = await response.json();
+                if(!response.ok) throw new Error(data.error || "Quote calculation failed.");
+                document.getElementById('quote-weight').textContent = `${data.chargeableWeight.toFixed(2)} kg`;
+                document.getElementById('quote-freight').textContent = `₹ ${data.freightCost.toFixed(2)}`;
+                document.getElementById('quote-gst').textContent = `₹ ${data.gst.toFixed(2)}`;
+                document.getElementById('quote-total').textContent = `₹ ${data.totalCost.toFixed(2)}`;
+                currentShipmentDetails.totalCost = data.totalCost;
+                document.getElementById('booking-step-1').style.display = "none";
+                document.getElementById('booking-step-2').style.display = "block";
+                bookingMessageEl.textContent = "";
+            } catch(error) {
+                bookingMessageEl.textContent = `Error: ${error.message}`;
+                bookingMessageEl.style.color = "#EF4444";
+            }
+        }
+
+       async function handleConfirmBooking() {
+            const bookingMessageEl = document.getElementById("booking-message");
+            bookingMessageEl.textContent = "Confirming Booking...";
+            bookingMessageEl.style.color = "#f3f4f6";
+            const token = localStorage.getItem("idToken");
+            try {
+                const response = await fetch(`${API_BASE_URL}/shipments/book`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    body: JSON.stringify(currentShipmentDetails)
+                });
+                const data = await response.json();
+                if(!response.ok) throw new Error(data.error || "Booking failed.");
+                bookingMessageEl.textContent = `Success! Tracking ID: ${data.trackingId}`;
+                bookingMessageEl.style.color = "#10B981";
+                setTimeout(() => modal.classList.add("hidden"), 2500);
+                await fetchAndDisplayDashboardData(token);
+            } catch(error) {
+                bookingMessageEl.textContent = `Error: ${error.message}`;
+                bookingMessageEl.style.color = "#EF4444";
+            }
+        }
+        
+        function getShipmentDetailsFromForm(){
+            const parcels = [];
+            document.getElementById("parcels-container").querySelectorAll(".parcel-row").forEach(row => {
+                parcels.push({
+                    weight: row.querySelector('.parcel-weight').value,
+                    dimensions: {
+                        length: row.querySelector('.parcel-l').value,
+                        width: row.querySelector('.parcel-w').value,
+                        height: row.querySelector('.parcel-h').value,
+                    }
+                });
+            });
+            return {
+                shipperDetails: { name: document.getElementById("shipper-name").value, address: document.getElementById("shipper-address").value, pincode: document.getElementById("shipper-pincode").value, phone: document.getElementById("shipper-phone").value, gstin: document.getElementById("shipper-gstin").value },
+                consigneeDetails: { name: document.getElementById("consignee-name").value, address: document.getElementById("consignee-address").value, pincode: document.getElementById("consignee-pincode").value, phone: document.getElementById("consignee-phone").value, gstin: document.getElementById("consignee-gstin").value },
+                parcels,
+                serviceType: document.getElementById("service-type").value,
+                fovType: document.getElementById("fov-type").value,
+                shipmentValue: document.getElementById("shipment-value").value
+            };
+        }
+        
+        initializeApp();
+    </script>
+</body>
+</html>
+

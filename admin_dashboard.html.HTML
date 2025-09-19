@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - PORTADOR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* Dark background */
+            color: #f3f4f6; /* Light text */
+        }
+        .card {
+            background-color: #1f2937; /* Darker card background */
+            border: 1px solid #374151;
+            border-radius: 0.75rem;
+        }
+        .form-input {
+            width: 100%; padding: 0.75rem; border: 1px solid #4b5563;
+            border-radius: 0.5rem; background-color: #374151; color: #f3f4f6;
+        }
+        .form-input::placeholder { color: #9ca3af; }
+        .form-input:focus {
+            outline: none; border-color: #ff0202;
+            box-shadow: 0 0 0 2px rgba(255, 2, 2, 0.3);
+        }
+        .btn {
+            padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600;
+            text-align: center; transition: all 0.3s; cursor: pointer;
+        }
+        .btn-brand { background-color: #ff0202; color: #ffffff; }
+        .btn-brand:hover { background-color: #e60000; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex; align-items: center; justify-content: center; z-index: 50;
+        }
+        .modal-content {
+            background: #1f2937; padding: 2rem; border-radius: 0.75rem;
+            width: 90%; max-width: 48rem; max-height: 90vh; overflow-y: auto;
+        }
+        .tab-button {
+            padding: 0.75rem 1.5rem; border-bottom: 3px solid transparent;
+            font-weight: 600; cursor: pointer; color: #9ca3af;
+        }
+        .tab-button.active { border-bottom-color: #ff0202; color: #ff0202; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body class="text-gray-300">
+
+    <!-- Admin Login Overlay -->
+    <div id="admin-login-overlay" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+        <div class="w-full max-w-md">
+            <header class="flex justify-center items-center mb-8">
+                <img src="LOGO PORTADOR new black.png" alt="PORTADOR Logo" class="h-20">
+            </header>
+            <div class="card p-8">
+                <h2 class="text-2xl font-bold mb-6 text-center text-white">Admin Login</h2>
+                <form id="admin-login-form" class="space-y-4">
+                    <input type="email" id="admin-email" placeholder="Admin Email" class="form-input" required>
+                    <input type="password" id="admin-password" placeholder="Password" class="form-input" required>
+                    <button type="submit" class="btn btn-brand w-full">Login</button>
+                </form>
+                <div id="admin-login-message" class="mt-4 text-center font-semibold text-red-500"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Admin Dashboard (hidden by default) -->
+    <div id="admin-dashboard" class="hidden">
+        <header class="bg-[#1f2937] shadow-lg p-4 flex justify-between items-center border-b border-gray-700">
+            <img src="LOGO PORTADOR new black.png" alt="PORTADOR Logo" class="h-16">
+            <div class="flex items-center space-x-4">
+                <span id="admin-name-display" class="font-semibold text-gray-300"></span>
+                <button id="admin-logout-button" class="btn bg-gray-700 hover:bg-gray-600 text-sm text-white">Logout</button>
+            </div>
+        </header>
+
+        <main class="p-8 space-y-8">
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="card p-6"><h3 class="text-gray-400">Total Revenue</h3><p id="stat-revenue" class="text-3xl font-bold mt-2 text-white">Loading...</p></div>
+                <div class="card p-6"><h3 class="text-gray-400">Total Shipments</h3><p id="stat-total-shipments" class="text-3xl font-bold mt-2 text-white">Loading...</p></div>
+                <div class="card p-6"><h3 class="text-gray-400">Total Users</h3><p id="stat-total-users" class="text-3xl font-bold mt-2 text-white">Loading...</p></div>
+                <div class="card p-6"><h3 class="text-gray-400">Pending Pickup</h3><p id="stat-pending" class="text-3xl font-bold mt-2 text-yellow-400">Loading...</p></div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="card">
+                <div class="border-b border-gray-700">
+                    <nav class="flex -mb-px">
+                        <button class="tab-button active" data-tab="shipments">Live Shipments</button>
+                        <button class="tab-button" data-tab="users">User Management</button>
+                    </nav>
+                </div>
+                <div id="tab-shipments" class="tab-content active p-6"><div class="overflow-x-auto"><table class="w-full text-left"><thead><tr class="border-b border-gray-700"><th class="p-3 text-white">Tracking ID</th><th class="p-3 text-white">Date</th><th class="p-3 text-white">Customer</th><th class="p-3 text-white">Origin</th><th class="p-3 text-white">Destination</th><th class="p-3 text-white">Status</th><th class="p-3 text-white">Actions</th></tr></thead><tbody id="shipments-table-body"></tbody></table></div></div>
+                <div id="tab-users" class="tab-content p-6"><div class="overflow-x-auto"><table class="w-full text-left"><thead><tr class="border-b border-gray-700"><th class="p-3 text-white">User Name</th><th class="p-3 text-white">Email</th><th class="p-3 text-white">Company</th><th class="p-3 text-white">Wallet Balance</th><th class="p-3 text-white">Actions</th></tr></thead><tbody id="users-table-body"></tbody></table></div></div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Generic Modal -->
+    <div id="details-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="modal-title" class="text-2xl font-bold text-white"></h2>
+                <button id="close-details-modal-btn"><i data-lucide="x" class="w-6 h-6 text-gray-400"></i></button>
+            </div>
+            <div id="modal-body" class="space-y-6"></div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const API_BASE_URL = 'https://portador-backend.onrender.com/api';
+
+        const loginOverlay = document.getElementById('admin-login-overlay'), dashboard = document.getElementById('admin-dashboard'), loginForm = document.getElementById('admin-login-form'), loginMessage = document.getElementById('admin-login-message'), logoutButton = document.getElementById('admin-logout-button'), adminNameDisplay = document.getElementById('admin-name-display'), shipmentsTableBody = document.getElementById('shipments-table-body'), usersTableBody = document.getElementById('users-table-body'), statRevenue = document.getElementById('stat-revenue'), statTotalShipments = document.getElementById('stat-total-shipments'), statTotalUsers = document.getElementById('stat-total-users'), statPending = document.getElementById('stat-pending'), detailsModal = document.getElementById('details-modal'), closeDetailsModalBtn = document.getElementById('close-details-modal-btn'), modalTitle = document.getElementById('modal-title'), modalBody = document.getElementById('modal-body'), tabButtons = document.querySelectorAll('.tab-button'), tabContents = document.querySelectorAll('.tab-content');
+        let allShipments = [], allUsers = [];
+
+        loginForm.addEventListener('submit', handleAdminLogin);
+        logoutButton.addEventListener('click', handleAdminLogout);
+        closeDetailsModalBtn.addEventListener('click', () => detailsModal.classList.add('hidden'));
+        document.addEventListener('DOMContentLoaded', checkAdminSession);
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                tabContents.forEach(content => content.classList.toggle('active', content.id === `tab-${button.dataset.tab}`));
+            });
+        });
+
+        async function handleAdminLogin(e) {
+            e.preventDefault();
+            loginMessage.textContent = '';
+            const email = document.getElementById('admin-email').value, password = document.getElementById('admin-password').value;
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/admin-login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Admin login failed.');
+                localStorage.setItem('adminToken', data.idToken);
+                localStorage.setItem('adminEmail', email);
+                await fetchAdminDashboardData();
+            } catch (error) {
+                loginMessage.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function handleAdminLogout() {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminEmail');
+            showLogin();
+        }
+
+        async function fetchAdminDashboardData() {
+            const token = localStorage.getItem('adminToken');
+            if (!token) { showLogin(); return; }
+            try {
+                const [shipmentsRes, usersRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/admin/all-shipments`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE_URL}/admin/all-users`, { headers: { 'Authorization': `Bearer ${token}` } })
+                ]);
+                if (shipmentsRes.status === 403 || usersRes.status === 403) { handleAdminLogout(); return; }
+                if (!shipmentsRes.ok || !usersRes.ok) throw new Error('Failed to fetch admin data.');
+                
+                allShipments = await shipmentsRes.json();
+                allUsers = await usersRes.json();
+
+                populateShipmentsTable(allShipments);
+                populateUsersTable(allUsers);
+                calculateAndDisplayStats(allShipments, allUsers);
+                showDashboard();
+            } catch (error) {
+                console.error("Error fetching admin data:", error);
+                loginMessage.textContent = "Could not load admin data. Your session might be expired.";
+                showLogin();
+            }
+        }
+        
+        function populateShipmentsTable(shipments) {
+            shipmentsTableBody.innerHTML = '';
+            if (!shipments.length) { shipmentsTableBody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-500">No shipments found.</td></tr>`; return; }
+            const formatStatus = status => `<span class="status-badge text-${{Booked:'yellow', 'In Transit':'blue', Delivered:'green', Cancelled:'red'}[status] || 'gray'}-300 bg-${{Booked:'yellow', 'In Transit':'blue', Delivered:'green', Cancelled:'red'}[status] || 'gray'}-900 bg-opacity-50">${status}</span>`;
+            shipments.forEach(s => {
+                const date = new Date(s.createdAt._seconds * 1000).toLocaleDateString();
+                const customerName = (s.shipper && s.shipper.name) ? s.shipper.name : 'N/A';
+                const originPincode = (s.shipper && s.shipper.pincode) ? s.shipper.pincode : (s.pickupLocation || 'N/A');
+                const destPincode = (s.consignee && s.consignee.pincode) ? s.consignee.pincode : (s.deliveryLocation || 'N/A');
+                shipmentsTableBody.innerHTML += `<tr class="border-b border-gray-700 hover:bg-gray-800"><td class="p-3 font-mono text-sm">${s.trackingId}</td><td class="p-3">${date}</td><td class="p-3">${customerName}</td><td class="p-3">${originPincode}</td><td class="p-3">${destPincode}</td><td class="p-3">${formatStatus(s.status)}</td><td class="p-3"><button class="text-red-500 hover:underline" onclick="showShipmentDetails('${s.trackingId}')">Manage</button></td></tr>`;
+            });
+        }
+
+        function populateUsersTable(users) {
+            usersTableBody.innerHTML = '';
+            if (!users.length) { usersTableBody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-gray-500">No users found.</td></tr>`; return; }
+            users.forEach(u => {
+                usersTableBody.innerHTML += `<tr class="border-b border-gray-700 hover:bg-gray-800"><td class="p-3">${u.name} ${u.role === 'admin' ? '<span class="text-xs font-bold text-red-500">(Admin)</span>' : ''}</td><td class="p-3">${u.email}</td><td class="p-3">${u.companyName||'N/A'}</td><td class="p-3">₹ ${u.walletBalance.toFixed(2)}</td><td class="p-3"><button class="text-red-500 hover:underline" onclick="manageUser('${u.uid}')">Manage</button></td></tr>`;
+            });
+        }
+        
+        function calculateAndDisplayStats(shipments, users) {
+            statTotalShipments.textContent = shipments.length;
+            statTotalUsers.textContent = users.length;
+            statPending.textContent = shipments.filter(s => s.status === 'Booked').length;
+            const totalRevenue = shipments.reduce((acc, s) => acc + (s.totalCost || 0), 0);
+            statRevenue.textContent = `₹ ${totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        async function showShipmentDetails(trackingId) {
+            modalTitle.textContent = 'Manage Shipment';
+            modalBody.innerHTML = '<p>Loading details...</p>';
+            detailsModal.classList.remove('hidden');
+            try {
+                const shipment = allShipments.find(s => s.trackingId === trackingId);
+                let parcelsHtml = (shipment.parcels || []).map((p, i) => `<div class="p-3 bg-gray-800 rounded-md"><p class="font-semibold">Box ${i+1}</p><p>Actual Wt: ${p.weight} kg</p><p>Dims: ${p.dimensions.length}x${p.dimensions.width}x${p.dimensions.height} cm</p></div>`).join('');
+                modalBody.innerHTML = `<div class="grid grid-cols-2 gap-6"><h4 class="font-bold col-span-2 text-white">Tracking ID: <span class="font-mono text-gray-300">${shipment.trackingId}</span></h4><div><h4 class="font-bold mb-2 text-white">Shipper</h4><p>${shipment.shipper.name}</p><p>${shipment.shipper.address}, ${shipment.shipper.pincode}</p><p>${shipment.shipper.phone}</p></div><div><h4 class="font-bold mb-2 text-white">Consignee</h4><p>${shipment.consignee.name}</p><p>${shipment.consignee.address}, ${shipment.consignee.pincode}</p><p>${shipment.consignee.phone}</p></div></div><hr class="border-gray-700"><div><h4 class="font-bold mb-2 text-white">Parcels</h4><div class="grid grid-cols-2 md:grid-cols-3 gap-3">${parcelsHtml}</div></div><hr class="border-gray-700"><div><h4 class="font-bold mb-2 text-white">Update Status</h4><form id="update-status-form" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><input type="hidden" id="update-tracking-id" value="${shipment.trackingId}"><div><label class="block text-sm font-medium">New Status</label><select id="new-status" class="form-input mt-1"><option>Booked</option><option>In Transit</option><option>Delivered</option><option>Cancelled</option></select></div><div><label class="block text-sm font-medium">Current Location</label><input type="text" id="new-location" placeholder="e.g., Mumbai Hub" class="form-input mt-1" required></div><button type="submit" class="btn btn-brand w-full">Update Status</button></form><div id="update-message" class="mt-2 text-center"></div></div>`;
+                document.getElementById('new-status').value = shipment.status;
+                document.getElementById('update-status-form').addEventListener('submit', handleStatusUpdate);
+            } catch (error) {
+                modalBody.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+            }
+        }
+        
+        function manageUser(uid) {
+            const user = allUsers.find(u => u.uid === uid);
+            modalTitle.textContent = `Manage User: ${user.name}`;
+            modalBody.innerHTML = `<div><p><strong>Email:</strong> ${user.email}</p><p><strong>Current Balance:</strong> ₹ ${user.walletBalance.toFixed(2)}</p></div><hr class="border-gray-700"><div><h4 class="font-bold mb-2 text-white">Credit Wallet</h4><form id="update-wallet-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end"><input type="hidden" id="update-user-id" value="${user.uid}"><div><label class="block text-sm font-medium">Amount to Add (₹)</label><input type="number" id="credit-amount" placeholder="e.g., 5000" class="form-input mt-1" required step="0.01"></div><button type="submit" class="btn btn-brand w-full">Credit Wallet</button></form><div id="wallet-update-message" class="mt-2 text-center"></div></div>`;
+            detailsModal.classList.remove('hidden');
+            document.getElementById('update-wallet-form').addEventListener('submit', handleWalletUpdate);
+        }
+
+        async function handleStatusUpdate(e) {
+            e.preventDefault();
+            const updateMessage = document.getElementById('update-message');
+            updateMessage.textContent = 'Updating...';
+            updateMessage.className = 'mt-2 text-center text-gray-400';
+            const token = localStorage.getItem('adminToken');
+            const trackingId = document.getElementById('update-tracking-id').value;
+            const status = document.getElementById('new-status').value;
+            const location = document.getElementById('new-location').value;
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/shipments/${trackingId}/update`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ status, location }) });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error);
+                updateMessage.textContent = 'Success! Shipment updated.';
+                updateMessage.className = 'mt-2 text-center text-green-500';
+                await fetchAdminDashboardData();
+                setTimeout(() => detailsModal.classList.add('hidden'), 1500);
+            } catch (error) {
+                updateMessage.textContent = `Error: ${error.message}`;
+                updateMessage.className = 'mt-2 text-center text-red-500';
+            }
+        }
+
+        async function handleWalletUpdate(e) {
+            e.preventDefault();
+            const walletUpdateMessage = document.getElementById('wallet-update-message');
+            walletUpdateMessage.textContent = 'Processing...';
+            walletUpdateMessage.className = 'mt-2 text-center text-gray-400';
+            const token = localStorage.getItem('adminToken');
+            const uid = document.getElementById('update-user-id').value;
+            const amount = document.getElementById('credit-amount').value;
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/users/${uid}/update-wallet`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ amount }) });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error);
+                walletUpdateMessage.textContent = 'Success! Wallet credited.';
+                walletUpdateMessage.className = 'mt-2 text-center text-green-500';
+                await fetchAdminDashboardData();
+                setTimeout(() => detailsModal.classList.add('hidden'), 1500);
+            } catch (error) {
+                walletUpdateMessage.textContent = `Error: ${error.message}`;
+                walletUpdateMessage.className = 'mt-2 text-center text-red-500';
+            }
+        }
+
+        function showDashboard() {
+            const email = localStorage.getItem('adminEmail');
+            if (email) {
+                adminNameDisplay.textContent = `Welcome, ${email.split('@')[0]}`;
+                loginOverlay.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+            }
+        }
+        function showLogin() {
+            loginOverlay.classList.remove('hidden');
+            dashboard.classList.add('hidden');
+        }
+
+        function checkAdminSession() {
+            const token = localStorage.getItem('adminToken');
+            if (token) fetchAdminDashboardData();
+            else showLogin();
+        }
+    </script>
+
+</body>
+</html>
+
