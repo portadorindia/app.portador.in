@@ -164,51 +164,16 @@
         let currentShipmentDetails={};
 
         // --- DOM Element Selections ---
-        const authView = document.getElementById("auth-view");
-        const dashboardView = document.getElementById("dashboard-view");
-        const loginForm = document.getElementById("login-form");
-        const signupForm = document.getElementById("signup-form");
-        const authMessage = document.getElementById("auth-message");
-        const userInfo = document.getElementById("user-info");
-        const userNameDisplay = document.getElementById("user-name-display");
-        const logoutButton = document.getElementById("logout-button");
-        const walletBalanceDisplay = document.getElementById("wallet-balance");
-        const totalShipmentsDisplay = document.getElementById("total-shipments");
-        const deliveredShipmentsDisplay = document.getElementById("delivered-shipments");
-        const inTransitShipmentsDisplay = document.getElementById("in-transit-shipments");
-        const trackingForm = document.getElementById("tracking-form");
-        const trackingIdInput = document.getElementById("tracking-id-input");
-        const trackingResults = document.getElementById("tracking-results");
-        const shipmentHistoryBody = document.getElementById("shipment-history-body");
-        const openBookingModalBtn = document.getElementById("open-booking-modal-btn");
-        const loginViewContent = document.getElementById('login-view-content');
-        const signupViewContent = document.getElementById('signup-view-content');
-        const showSignupBtn = document.getElementById('show-signup-btn');
-        const showLoginBtn = document.getElementById('show-login-btn');
-        const addFundsBtn = document.getElementById('add-funds-btn');
-        const modal = document.getElementById('modal');
-        const modalTitle = document.getElementById('modal-title');
-        const modalBody = document.getElementById('modal-body');
-        const closeModalBtn = document.getElementById('close-modal-btn');
+        const authView = document.getElementById("auth-view"), dashboardView = document.getElementById("dashboard-view"), loginForm = document.getElementById("login-form"), signupForm = document.getElementById("signup-form"), authMessage = document.getElementById("auth-message"), userInfo = document.getElementById("user-info"), userNameDisplay = document.getElementById("user-name-display"), logoutButton = document.getElementById("logout-button"), walletBalanceDisplay = document.getElementById("wallet-balance"), totalShipmentsDisplay = document.getElementById("total-shipments"), deliveredShipmentsDisplay = document.getElementById("delivered-shipments"), inTransitShipmentsDisplay = document.getElementById("in-transit-shipments"), trackingForm = document.getElementById("tracking-form"), trackingIdInput = document.getElementById("tracking-id-input"), trackingResults = document.getElementById("tracking-results"), shipmentHistoryBody = document.getElementById("shipment-history-body"), openBookingModalBtn = document.getElementById("open-booking-modal-btn"), loginViewContent = document.getElementById('login-view-content'), signupViewContent = document.getElementById('signup-view-content'), showSignupBtn = document.getElementById('show-signup-btn'), showLoginBtn = document.getElementById('show-login-btn'), addFundsBtn = document.getElementById('add-funds-btn'), modal = document.getElementById('modal'), modalTitle = document.getElementById('modal-title'), modalBody = document.getElementById('modal-body'), closeModalBtn = document.getElementById('close-modal-btn');
         
         // --- Core Functions ---
-        function showDashboard() {
-            authView.style.display = "none";
-            dashboardView.style.display = "block";
-        }
-        
-        function showLogin() {
-            authView.style.display = "block";
-            dashboardView.style.display = "none";
-        }
+        function showDashboard() { authView.style.display = "none"; dashboardView.style.display = "block"; }
+        function showLogin() { authView.style.display = "block"; dashboardView.style.display = "none"; }
 
         async function initializeApp() {
             const token = localStorage.getItem("idToken");
-            if (token) {
-                await fetchAndDisplayDashboardData(token);
-            } else {
-                showLogin();
-            }
+            if (token) await fetchAndDisplayDashboardData(token);
+            else showLogin();
         }
 
         async function fetchAndDisplayDashboardData(token) {
@@ -218,7 +183,6 @@
                     fetch(`${API_BASE_URL}/shipments/stats`, { headers: { Authorization: `Bearer ${token}` } }),
                     fetch(`${API_BASE_URL}/shipments`, { headers: { Authorization: `Bearer ${token}` } })
                 ]);
-
                 if (profileRes.status === 403) {
                     console.error("Auth token invalid or expired.");
                     handleLogout();
@@ -226,10 +190,7 @@
                     authMessage.style.color = "#EF4444";
                     return;
                 }
-                if (!profileRes.ok || !statsRes.ok || !historyRes.ok) {
-                    throw new Error("Could not fetch all dashboard data.");
-                }
-
+                if (!profileRes.ok || !statsRes.ok || !historyRes.ok) throw new Error("Could not fetch all dashboard data.");
                 currentUserData = await profileRes.json();
                 const statsData = await statsRes.json();
                 const historyData = await historyRes.json();
@@ -243,55 +204,14 @@
                 showDashboard();
             } catch(error) {
                 console.error("Dashboard fetch error:", error);
-                handleLogout(); // Log out on any critical data fetch error
+                handleLogout();
             }
         }
-
+        
         // --- Event Handlers ---
-        async function handleLogin(e) {
-            e.preventDefault();
-            authMessage.textContent = "Logging in...";
-            authMessage.style.color = "#f3f4f6";
-            const email = document.getElementById("login-email").value;
-            const password = document.getElementById("login-password").value;
-            try {
-                const response = await fetch(`${API_BASE_URL}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
-                const data = await response.json();
-                if(!response.ok) throw new Error(data.error || "Login failed.");
-                localStorage.setItem("idToken", data.idToken);
-                await fetchAndDisplayDashboardData(data.idToken);
-            } catch(error) {
-                authMessage.textContent = `Error: ${error.message}`;
-                authMessage.style.color = "#EF4444";
-            }
-        }
-
-        async function handleSignup(e) {
-            e.preventDefault();
-            authMessage.textContent = "Signing up...";
-            authMessage.style.color = "#f3f4f6";
-            const name = document.getElementById("signup-name").value;
-            const companyName = document.getElementById("signup-company").value;
-            const email = document.getElementById("signup-email").value;
-            const password = document.getElementById("signup-password").value;
-            try {
-                const response = await fetch(`${API_BASE_URL}/auth/signup`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, companyName, email, password }) });
-                const data = await response.json();
-                if(!response.ok) throw new Error(data.error || "Signup failed.");
-                authMessage.textContent = "Signup successful! Please log in.";
-                authMessage.style.color = "#10B981";
-                signupForm.reset();
-                showLoginBtn.click(); // Switch to login view
-            } catch(error) {
-                authMessage.textContent = `Error: ${error.message}`;
-                authMessage.style.color = "#EF4444";
-            }
-        }
-
-        function handleLogout() {
-            localStorage.removeItem("idToken");
-            showLogin();
-        }
+        async function handleLogin(e) { e.preventDefault(); authMessage.textContent = "Logging in..."; authMessage.style.color = "#f3f4f6"; const t=document.getElementById("login-email").value,o=document.getElementById("login-password").value;try{const e=await fetch(`${API_BASE_URL}/auth/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:t,password:o})}),n=await e.json();if(!e.ok)throw new Error(n.error||"Login failed.");localStorage.setItem("idToken",n.idToken);await fetchAndDisplayDashboardData(n.idToken)}catch(e){authMessage.textContent=`Error: ${e.message}`,authMessage.style.color="#EF4444"}}
+        async function handleSignup(e) { e.preventDefault(); authMessage.textContent = "Signing up..."; authMessage.style.color = "#f3f4f6"; const t=document.getElementById("signup-name").value,o=document.getElementById("signup-company").value,n=document.getElementById("signup-email").value,s=document.getElementById("signup-password").value;try{const e=await fetch(`${API_BASE_URL}/auth/signup`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:t,companyName:o,email:n,password:s})}),i=await e.json();if(!e.ok)throw new Error(i.error||"Signup failed.");authMessage.textContent="Signup successful! Please log in.",authMessage.style.color="#10B981",signupForm.reset(),showLoginBtn.click()}catch(e){authMessage.textContent=`Error: ${e.message}`,authMessage.style.color="#EF4444"}}
+        function handleLogout() { localStorage.removeItem("idToken"); showLogin(); }
         
         async function handleTracking(e) {
             e.preventDefault();
