@@ -172,8 +172,11 @@
 
         async function initializeApp() {
             const token = localStorage.getItem("idToken");
-            if (token) await fetchAndDisplayDashboardData(token);
-            else showLogin();
+            if (token) {
+                await fetchAndDisplayDashboardData(token);
+            } else {
+                showLogin();
+            }
         }
 
         async function fetchAndDisplayDashboardData(token) {
@@ -391,6 +394,10 @@
                 shipmentValue: document.getElementById("shipment-value").value
             };
         }
+        
+        // --- Initialize App ---
+        showLoginBtn.addEventListener('click', (e) => { e.preventDefault(); signupViewContent.classList.add('hidden'); loginViewContent.classList.remove('hidden'); });
+        showSignupBtn.addEventListener('click', (e) => { e.preventDefault(); loginViewContent.classList.add('hidden'); signupViewContent.classList.remove('hidden'); });
         
         initializeApp();
     </script>
